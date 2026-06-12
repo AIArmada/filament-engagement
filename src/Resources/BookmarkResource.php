@@ -4,9 +4,11 @@ declare(strict_types=1);
 
 namespace AIArmada\FilamentEngagement\Resources;
 
+use AIArmada\CommerceSupport\Support\JsonDisplay;
 use AIArmada\Engagement\Models\Bookmark;
 use Filament\Infolists;
-use Filament\Infolists\Infolist;
+use Filament\Schemas\Components\Section;
+use Filament\Schemas\Schema;
 use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
@@ -16,9 +18,9 @@ final class BookmarkResource extends Resource
 {
     protected static ?string $model = Bookmark::class;
 
-    protected static ?string $navigationIcon = 'heroicon-o-bookmark';
+    protected static string|\BackedEnum|null $navigationIcon = 'heroicon-o-bookmark';
 
-    protected static ?string $navigationGroup = 'Engagement';
+    protected static string|\UnitEnum|null $navigationGroup = 'Engagement';
 
     protected static ?int $navigationSort = 2;
 
@@ -50,30 +52,44 @@ final class BookmarkResource extends Resource
                     'removed' => 'Removed',
                     'archived' => 'Archived',
                 ]),
-                Tables\Filters\SelectFilter::make('bookmarker_type')->options(['App\Models\User' => 'User'])->label('Bookmarker Type'),
-                Tables\Filters\SelectFilter::make('bookmarkable_type')->options(['App\Models\User' => 'User'])->label('Bookmarkable Type'),
+                Tables\Filters\SelectFilter::make('bookmarker_type')
+                    ->options(fn (): array => Bookmark::query()
+                        ->select('bookmarker_type')
+                        ->distinct()
+                        ->orderBy('bookmarker_type')
+                        ->pluck('bookmarker_type', 'bookmarker_type')
+                        ->all())
+                    ->label('Bookmarker Type'),
+                Tables\Filters\SelectFilter::make('bookmarkable_type')
+                    ->options(fn (): array => Bookmark::query()
+                        ->select('bookmarkable_type')
+                        ->distinct()
+                        ->orderBy('bookmarkable_type')
+                        ->pluck('bookmarkable_type', 'bookmarkable_type')
+                        ->all())
+                    ->label('Bookmarkable Type'),
             ])
             ->actions([
-                Tables\Actions\Action::make('remove')
+                \Filament\Actions\Action::make('remove')
                     ->action(fn (Bookmark $record) => $record->update(['status' => 'removed']))
                     ->requiresConfirmation()
                     ->visible(fn (Bookmark $record) => $record->isActive()),
-                Tables\Actions\Action::make('restore')
+                \Filament\Actions\Action::make('restore')
                     ->action(fn (Bookmark $record) => $record->update(['status' => 'active']))
                     ->requiresConfirmation()
                     ->visible(fn (Bookmark $record) => $record->isRemoved()),
             ])
             ->bulkActions([
-                Tables\Actions\BulkAction::make('remove')
+                \Filament\Actions\BulkAction::make('remove')
                     ->action(fn ($records) => $records->each->update(['status' => 'removed'])),
             ])
             ->defaultSort('bookmarked_at', 'desc');
     }
 
-    public static function infolist(Infolist $infolist): Infolist
+    public static function infolist(Schema $schema): Schema
     {
-        return $infolist->schema([
-            Infolists\Components\Section::make()->schema([
+        return $schema->schema([
+            Section::make()->schema([
                 Infolists\Components\TextEntry::make('bookmarker_type'),
                 Infolists\Components\TextEntry::make('bookmarker_id'),
                 Infolists\Components\TextEntry::make('bookmarkable_type'),
@@ -84,7 +100,9 @@ final class BookmarkResource extends Resource
                 Infolists\Components\TextEntry::make('removed_at')->dateTime(),
                 Infolists\Components\TextEntry::make('archived_at')->dateTime(),
                 Infolists\Components\TextEntry::make('source'),
-                Infolists\Components\TextEntry::make('metadata')->json()
+                Infolists\Components\TextEntry::make('metadata')
+                    ->formatStateUsing(fn (mixed $state): string => JsonDisplay::format($state))
+                    ->html()
                     ->visible(fn (?array $state): bool => ! empty($state)),
             ])->columns(2),
         ]);

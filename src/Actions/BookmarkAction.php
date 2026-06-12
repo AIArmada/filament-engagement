@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace AIArmada\FilamentEngagement\Actions;
 
 use AIArmada\Engagement\Contracts\EngagementManager;
-use Filament\Tables\Actions\Action;
+use Filament\Actions\Action;
 
 final class BookmarkAction
 {

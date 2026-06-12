@@ -4,11 +4,13 @@ declare(strict_types=1);
 
 namespace AIArmada\FilamentEngagement\Resources;
 
+use AIArmada\CommerceSupport\Support\JsonDisplay;
+use AIArmada\CommerceSupport\Support\Filament\OwnerUiScope;
 use AIArmada\Engagement\Models\BookmarkCollection;
 use Filament\Forms;
-use Filament\Forms\Form;
 use Filament\Infolists;
-use Filament\Infolists\Infolist;
+use Filament\Schemas\Components\Section;
+use Filament\Schemas\Schema;
 use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
@@ -18,21 +20,23 @@ final class BookmarkCollectionResource extends Resource
 {
     protected static ?string $model = BookmarkCollection::class;
 
-    protected static ?string $navigationIcon = 'heroicon-o-folder';
+    protected static string|\BackedEnum|null $navigationIcon = 'heroicon-o-folder';
 
-    protected static ?string $navigationGroup = 'Engagement';
+    protected static string|\UnitEnum|null $navigationGroup = 'Engagement';
 
     protected static ?int $navigationSort = 3;
 
     public static function getEloquentQuery(): Builder
     {
-        return parent::getEloquentQuery()->latest();
+        $query = parent::getEloquentQuery();
+
+        return OwnerUiScope::apply($query, includeGlobal: false);
     }
 
-    public static function form(Form $form): Form
+    public static function form(Schema $schema): Schema
     {
-        return $form->schema([
-            Forms\Components\Section::make()->schema([
+        return $schema->schema([
+            Section::make()->schema([
                 Forms\Components\TextInput::make('name')
                     ->required()
                     ->maxLength(255),
@@ -88,15 +92,14 @@ final class BookmarkCollectionResource extends Resource
                     'active' => 'Active',
                     'archived' => 'Archived',
                 ]),
-                Tables\Filters\SelectFilter::make('owner_type')->options(['App\Models\User' => 'User'])->label('Owner Type'),
             ])
             ->defaultSort('created_at', 'desc');
     }
 
-    public static function infolist(Infolist $infolist): Infolist
+    public static function infolist(Schema $schema): Schema
     {
-        return $infolist->schema([
-            Infolists\Components\Section::make()->schema([
+        return $schema->schema([
+            Section::make()->schema([
                 Infolists\Components\TextEntry::make('name'),
                 Infolists\Components\TextEntry::make('slug'),
                 Infolists\Components\TextEntry::make('description'),
@@ -105,11 +108,13 @@ final class BookmarkCollectionResource extends Resource
                 Infolists\Components\TextEntry::make('visibility')->badge(),
                 Infolists\Components\TextEntry::make('status')->badge(),
                 Infolists\Components\TextEntry::make('sort_order')->numeric(),
-                Infolists\Components\TextEntry::make('is_default')->boolean(),
-                Infolists\Components\TextEntry::make('is_system')->boolean(),
+                Infolists\Components\IconEntry::make('is_default')->boolean(),
+                Infolists\Components\IconEntry::make('is_system')->boolean(),
                 Infolists\Components\TextEntry::make('created_at')->dateTime(),
                 Infolists\Components\TextEntry::make('updated_at')->dateTime(),
-                Infolists\Components\TextEntry::make('metadata')->json()
+                Infolists\Components\TextEntry::make('metadata')
+                    ->formatStateUsing(fn (mixed $state): string => JsonDisplay::format($state))
+                    ->html()
                     ->visible(fn (?array $state): bool => ! empty($state)),
             ])->columns(2),
         ]);

@@ -6,7 +6,7 @@ namespace AIArmada\FilamentEngagement\Actions;
 
 use AIArmada\Engagement\Contracts\ReminderManager;
 use Filament\Forms;
-use Filament\Tables\Actions\Action;
+use Filament\Actions\Action;
 
 final class SetReminderAction
 {

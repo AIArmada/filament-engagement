@@ -4,11 +4,13 @@ declare(strict_types=1);
 
 namespace AIArmada\FilamentEngagement\Resources;
 
+use AIArmada\CommerceSupport\Support\JsonDisplay;
 use AIArmada\Engagement\Models\Reminder;
+use Carbon\CarbonImmutable;
 use Filament\Forms;
-use Filament\Forms\Form;
 use Filament\Infolists;
-use Filament\Infolists\Infolist;
+use Filament\Schemas\Components\Section;
+use Filament\Schemas\Schema;
 use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
@@ -17,9 +19,11 @@ final class ReminderResource extends Resource
 {
     protected static ?string $model = Reminder::class;
 
+    protected static string|\UnitEnum|null $navigationGroup = 'Engagement';
+
     protected static ?int $navigationSort = 7;
 
-    protected static ?string $navigationIcon = 'heroicon-o-clock';
+    protected static string|\BackedEnum|null $navigationIcon = 'heroicon-o-clock';
 
     public static function table(Table $table): Table
     {
@@ -53,50 +57,59 @@ final class ReminderResource extends Resource
                         'failed' => 'Failed',
                         'expired' => 'Expired',
                     ]),
-                Tables\Filters\SelectFilter::make('channel'),
+                Tables\Filters\SelectFilter::make('channel')
+                    ->options([
+                        'mail' => 'Mail',
+                        'database' => 'Database',
+                        'notification' => 'Notification',
+                    ]),
             ])
             ->actions([
-                Tables\Actions\Action::make('cancel')
+                \Filament\Actions\Action::make('cancel')
                     ->action(fn (Reminder $record) => $record->update(['status' => Reminder::STATUS_CANCELLED]))
                     ->requiresConfirmation(),
-                Tables\Actions\Action::make('mark sent')
+                \Filament\Actions\Action::make('mark sent')
                     ->label('Mark Sent')
                     ->action(fn (Reminder $record) => $record->update([
                         'status' => Reminder::STATUS_SENT,
-                        'sent_at' => now(),
+                        'sent_at' => CarbonImmutable::now(),
                     ]))
                     ->requiresConfirmation(),
             ]);
     }
 
-    public static function infolist(Infolist $infolist): Infolist
+    public static function infolist(Schema $schema): Schema
     {
-        return $infolist
+        return $schema
             ->schema([
-                Infolists\Components\TextEntry::make('recipient_type'),
-                Infolists\Components\TextEntry::make('recipient_id'),
-                Infolists\Components\TextEntry::make('remindable_type'),
-                Infolists\Components\TextEntry::make('remindable_id'),
-                Infolists\Components\TextEntry::make('reminder_type'),
-                Infolists\Components\TextEntry::make('status'),
-                Infolists\Components\TextEntry::make('channel'),
-                Infolists\Components\TextEntry::make('remind_at')->dateTime(),
-                Infolists\Components\TextEntry::make('offset_minutes'),
-                Infolists\Components\TextEntry::make('anchor_type'),
-                Infolists\Components\TextEntry::make('anchor_code'),
-                Infolists\Components\TextEntry::make('notification_class'),
-                Infolists\Components\TextEntry::make('sent_at')->dateTime(),
-                Infolists\Components\TextEntry::make('cancelled_at')->dateTime(),
-                Infolists\Components\TextEntry::make('failed_at')->dateTime(),
-                Infolists\Components\TextEntry::make('expires_at')->dateTime(),
-                Infolists\Components\TextEntry::make('failure_reason'),
-                Infolists\Components\TextEntry::make('metadata')->json(),
+                Section::make()->columns(2)->schema([
+                    Infolists\Components\TextEntry::make('recipient_type'),
+                    Infolists\Components\TextEntry::make('recipient_id'),
+                    Infolists\Components\TextEntry::make('remindable_type'),
+                    Infolists\Components\TextEntry::make('remindable_id'),
+                    Infolists\Components\TextEntry::make('reminder_type'),
+                    Infolists\Components\TextEntry::make('status'),
+                    Infolists\Components\TextEntry::make('channel'),
+                    Infolists\Components\TextEntry::make('remind_at')->dateTime(),
+                    Infolists\Components\TextEntry::make('offset_minutes'),
+                    Infolists\Components\TextEntry::make('anchor_type'),
+                    Infolists\Components\TextEntry::make('anchor_code'),
+                    Infolists\Components\TextEntry::make('notification_class'),
+                    Infolists\Components\TextEntry::make('sent_at')->dateTime(),
+                    Infolists\Components\TextEntry::make('cancelled_at')->dateTime(),
+                    Infolists\Components\TextEntry::make('failed_at')->dateTime(),
+                    Infolists\Components\TextEntry::make('expires_at')->dateTime(),
+                    Infolists\Components\TextEntry::make('failure_reason'),
+                    Infolists\Components\TextEntry::make('metadata')
+                        ->formatStateUsing(fn (mixed $state): string => JsonDisplay::format($state))
+                        ->html(),
+                ]),
             ]);
     }
 
-    public static function form(Form $form): Form
+    public static function form(Schema $schema): Schema
     {
-        return $form
+        return $schema
             ->schema([
                 Forms\Components\TextInput::make('recipient_type'),
                 Forms\Components\TextInput::make('recipient_id'),

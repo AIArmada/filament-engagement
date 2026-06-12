@@ -4,11 +4,12 @@ declare(strict_types=1);
 
 namespace AIArmada\FilamentEngagement\Resources;
 
+use AIArmada\CommerceSupport\Support\JsonDisplay;
 use AIArmada\Engagement\Models\Reaction;
 use Filament\Forms;
-use Filament\Forms\Form;
 use Filament\Infolists;
-use Filament\Infolists\Infolist;
+use Filament\Schemas\Components\Section;
+use Filament\Schemas\Schema;
 use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
@@ -17,9 +18,11 @@ final class ReactionResource extends Resource
 {
     protected static ?string $model = Reaction::class;
 
+    protected static string|\UnitEnum|null $navigationGroup = 'Engagement';
+
     protected static ?int $navigationSort = 5;
 
-    protected static ?string $navigationIcon = 'heroicon-o-star';
+    protected static string|\BackedEnum|null $navigationIcon = 'heroicon-o-star';
 
     public static function table(Table $table): Table
     {
@@ -52,38 +55,41 @@ final class ReactionResource extends Resource
                     ]),
             ])
             ->actions([
-                Tables\Actions\Action::make('remove')
+                \Filament\Actions\Action::make('remove')
                     ->visible(fn (Reaction $record): bool => $record->isActive())
                     ->action(fn (Reaction $record) => $record->update(['status' => Reaction::STATUS_REMOVED]))
                     ->requiresConfirmation(),
-                Tables\Actions\Action::make('restore')
+                \Filament\Actions\Action::make('restore')
                     ->visible(fn (Reaction $record): bool => $record->isRemoved())
                     ->action(fn (Reaction $record) => $record->update(['status' => Reaction::STATUS_ACTIVE]))
                     ->requiresConfirmation(),
             ]);
     }
 
-    public static function infolist(Infolist $infolist): Infolist
+    public static function infolist(Schema $schema): Schema
     {
-        return $infolist
+        return $schema
             ->schema([
-                Infolists\Components\TextEntry::make('reactor_type'),
-                Infolists\Components\TextEntry::make('reactor_id'),
-                Infolists\Components\TextEntry::make('reactable_type'),
-                Infolists\Components\TextEntry::make('reactable_id'),
-                Infolists\Components\TextEntry::make('reaction_type'),
-                Infolists\Components\TextEntry::make('status'),
-                Infolists\Components\TextEntry::make('reacted_at')->dateTime(),
-                Infolists\Components\TextEntry::make('removed_at')->dateTime(),
-                Infolists\Components\TextEntry::make('source'),
-                Infolists\Components\TextEntry::make('metadata')->json(),
+                Section::make()->schema([
+                    Infolists\Components\TextEntry::make('reactor_type'),
+                    Infolists\Components\TextEntry::make('reactor_id'),
+                    Infolists\Components\TextEntry::make('reactable_type'),
+                    Infolists\Components\TextEntry::make('reactable_id'),
+                    Infolists\Components\TextEntry::make('reaction_type'),
+                    Infolists\Components\TextEntry::make('status'),
+                    Infolists\Components\TextEntry::make('reacted_at')->dateTime(),
+                    Infolists\Components\TextEntry::make('removed_at')->dateTime(),
+                    Infolists\Components\TextEntry::make('source'),
+                    Infolists\Components\TextEntry::make('metadata')
+                        ->formatStateUsing(fn (mixed $state): string => JsonDisplay::format($state))
+                        ->html(),
+                ]),
             ]);
     }
 
-    public static function form(Form $form): Form
+    public static function form(Schema $schema): Schema
     {
-        return $form
-            ->schema([
+        return $schema->schema([
                 Forms\Components\TextInput::make('reactor_type'),
                 Forms\Components\TextInput::make('reactor_id'),
                 Forms\Components\TextInput::make('reactable_type'),

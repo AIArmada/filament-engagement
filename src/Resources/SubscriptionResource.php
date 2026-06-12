@@ -4,11 +4,12 @@ declare(strict_types=1);
 
 namespace AIArmada\FilamentEngagement\Resources;
 
+use AIArmada\CommerceSupport\Support\JsonDisplay;
 use AIArmada\Engagement\Models\Subscription;
 use Filament\Forms;
-use Filament\Forms\Form;
 use Filament\Infolists;
-use Filament\Infolists\Infolist;
+use Filament\Schemas\Components\Section;
+use Filament\Schemas\Schema;
 use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
@@ -17,9 +18,11 @@ final class SubscriptionResource extends Resource
 {
     protected static ?string $model = Subscription::class;
 
+    protected static string|\UnitEnum|null $navigationGroup = 'Engagement';
+
     protected static ?int $navigationSort = 6;
 
-    protected static ?string $navigationIcon = 'heroicon-o-bell';
+    protected static string|\BackedEnum|null $navigationIcon = 'heroicon-o-bell';
 
     public static function table(Table $table): Table
     {
@@ -36,32 +39,46 @@ final class SubscriptionResource extends Resource
                 Tables\Columns\TextColumn::make('expires_at')->dateTime(),
             ])
             ->filters([
-                Tables\Filters\SelectFilter::make('subscription_type'),
-                Tables\Filters\SelectFilter::make('status'),
-                Tables\Filters\SelectFilter::make('notification_level'),
+                Tables\Filters\SelectFilter::make('subscription_type')
+                    ->options([
+                        'updates' => 'Updates',
+                    ]),
+                Tables\Filters\SelectFilter::make('status')
+                    ->options([
+                        'active' => 'Active',
+                        'muted' => 'Muted',
+                        'unsubscribed' => 'Unsubscribed',
+                        'expired' => 'Expired',
+                    ]),
+                Tables\Filters\SelectFilter::make('notification_level')
+                    ->options([
+                        'all' => 'All',
+                        'none' => 'None',
+                        'digest' => 'Digest',
+                    ]),
             ])
             ->actions([
-                Tables\Actions\Action::make('mute')
+                \Filament\Actions\Action::make('mute')
                     ->action(fn (Subscription $record) => $record->update(['status' => Subscription::STATUS_MUTED]))
                     ->requiresConfirmation(),
-                Tables\Actions\Action::make('unmute')
+                \Filament\Actions\Action::make('unmute')
                     ->action(fn (Subscription $record) => $record->update(['status' => Subscription::STATUS_ACTIVE]))
                     ->requiresConfirmation(),
-                Tables\Actions\Action::make('unsubscribe')
+                \Filament\Actions\Action::make('unsubscribe')
                     ->action(fn (Subscription $record) => $record->update(['status' => Subscription::STATUS_UNSUBSCRIBED]))
                     ->requiresConfirmation(),
             ]);
     }
 
-    public static function infolist(Infolist $infolist): Infolist
+    public static function infolist(Schema $schema): Schema
     {
-        return $infolist
+        return $schema
             ->schema([
-                Infolists\Components\Section::make('Subscriber Information')->columns(2)->schema([
+                Section::make('Subscriber Information')->columns(2)->schema([
                     Infolists\Components\TextEntry::make('subscriber_type'),
                     Infolists\Components\TextEntry::make('subscriber_id'),
                 ]),
-                Infolists\Components\Section::make('Subscription Details')->columns(2)->schema([
+                Section::make('Subscription Details')->columns(2)->schema([
                     Infolists\Components\TextEntry::make('subscribable_type'),
                     Infolists\Components\TextEntry::make('subscribable_id'),
                     Infolists\Components\TextEntry::make('subscription_type'),
@@ -71,21 +88,25 @@ final class SubscriptionResource extends Resource
                     Infolists\Components\TextEntry::make('muted_at')->dateTime(),
                     Infolists\Components\TextEntry::make('unsubscribed_at')->dateTime(),
                 ]),
-                Infolists\Components\Section::make('Criteria')
+                Section::make('Criteria')
                     ->visible(fn (Subscription $record): bool => ! empty($record->criteria))
                     ->schema([
-                        Infolists\Components\TextEntry::make('criteria')->json(),
+                        Infolists\Components\TextEntry::make('criteria')
+                            ->formatStateUsing(fn (mixed $state): string => JsonDisplay::format($state))
+                            ->html(),
                     ]),
-                Infolists\Components\Section::make('Notification Preferences')->columns(2)->schema([
+                Section::make('Notification Preferences')->columns(2)->schema([
                     Infolists\Components\TextEntry::make('notification_level'),
-                    Infolists\Components\TextEntry::make('notification_preferences')->json(),
+                    Infolists\Components\TextEntry::make('notification_preferences')
+                        ->formatStateUsing(fn (mixed $state): string => JsonDisplay::format($state))
+                        ->html(),
                 ]),
             ]);
     }
 
-    public static function form(Form $form): Form
+    public static function form(Schema $schema): Schema
     {
-        return $form
+        return $schema
             ->schema([
                 Forms\Components\TextInput::make('subscriber_type'),
                 Forms\Components\TextInput::make('subscriber_id'),
